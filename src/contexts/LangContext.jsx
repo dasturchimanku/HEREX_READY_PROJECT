@@ -1,34 +1,38 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import en from "../i18n/en.json";
-import uz from "../i18n/uz.json";
-import ru from "../i18n/ru.json";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 const LangContext = createContext();
 
 export const LangProvider = ({ children }) => {
-    const [lang, setLang] = useState(localStorage.getItem("lang") || "uz");
-    const [strings, setStrings] = useState(uz);
+    const [lang, setLang] = useState(
+        () => localStorage.getItem("lang") || "uz"
+    );
+    const [strings, setStrings] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        let selected;
-        switch (lang) {
-            case "en":
-                selected = en;
-                break;
-            case "ru":
-                selected = ru;
-                break;
-            default:
-                selected = uz;
-        }
-        setStrings(selected);
+        const loadStrings = async () => {
+            setLoading(true);
+            try {
+                // i18n faylni dinamik import
+                const mod = await import(`../i18n/${lang}.json`);
+                setStrings(mod.default);
+            } catch (err) {
+                console.error("Til fayli yuklanmadi:", err);
+                setStrings({});
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadStrings();
         localStorage.setItem("lang", lang);
     }, [lang]);
 
-    // 🟢 Agar strings hali yuklanmagan bo‘lsa — fallback bo‘lishi kerak
-    if (!strings) {
+    // 🟢 Fallback (til yuklanmaguncha)
+    if (loading || !strings) {
         return (
-            <div className="text-center text-gray-500 mt-10">Loading...</div>
+            <div className="w-full h-screen flex items-center justify-center text-gray-500 dark:text-gray-300">
+                <div className="animate-pulse text-lg">Loading...</div>
+            </div>
         );
     }
 
